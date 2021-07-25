@@ -50,18 +50,18 @@ contract NoFeeStrategy is BaseStrategy {
     function assignSwapPairSafely(address _swapPairToken0, address _swapPairToken1, address _rewardToken) private {
         if (_rewardToken != IPair(address(depositToken)).token0() && _rewardToken != IPair(address(depositToken)).token1()) {
             // deployment checks for non-pool2
-            require(_swapPairToken0 > address(0), "Swap pair 0 is necessary but not supplied");
-            require(_swapPairToken1 > address(0), "Swap pair 1 is necessary but not supplied");
+            require(_swapPairToken0 > address(0), "Swap pair 0 not supplied");
+            require(_swapPairToken1 > address(0), "Swap pair 1 not supplied");
             swapPairToken0 = IPair(_swapPairToken0);
             swapPairToken1 = IPair(_swapPairToken1);
-            require(swapPairToken0.token0() == _rewardToken || swapPairToken0.token1() == _rewardToken, "Swap pair supplied does not have the reward token as one of it's pair");
+            require(swapPairToken0.token0() == _rewardToken || swapPairToken0.token1() == _rewardToken, "Swap pair missing rewarded token");
             require(
                 swapPairToken0.token0() == IPair(address(depositToken)).token0() || swapPairToken0.token1() == IPair(address(depositToken)).token0(),
-                "Swap pair 0 supplied does not match the pair in question"
+                "Swap pair 0 does not match pair"
             );
             require(
                 swapPairToken1.token0() == IPair(address(depositToken)).token1() || swapPairToken1.token1() == IPair(address(depositToken)).token1(),
-                "Swap pair 1 supplied does not match the pair in question"
+                "Swap pair 1 does not match pair"
             );
         } else if (_rewardToken == IPair(address(depositToken)).token0()) {
             swapPairToken1 = IPair(address(depositToken));
@@ -114,13 +114,13 @@ contract NoFeeStrategy is BaseStrategy {
     }
 
     function _withdrawDepositTokens(uint amount) private {
-        require(amount > 0, "DexStrategyV5::_withdrawDepositTokens");
+        require(amount > 0, "NoFee::_withdrawDepositTokens");
         stakingContract.withdraw(amount);
     }
 
     function reinvest() external override onlyEOA {
         uint unclaimedRewards = checkReward();
-        require(unclaimedRewards >= MIN_TOKENS_TO_REINVEST, "DexStrategyV5::reinvest");
+        require(unclaimedRewards >= MIN_TOKENS_TO_REINVEST, "NoFee::reinvest");
         _reinvest(unclaimedRewards);
     }
 
@@ -251,7 +251,7 @@ contract NoFeeStrategy is BaseStrategy {
      */
     function _convertRewardTokensToDepositTokens(uint amount) private returns (uint) {
         uint amountIn = amount.div(2);
-        require(amountIn > 0, "DexStrategyV5::_convertRewardTokensToDepositTokens");
+        require(amountIn > 0, "NoFee::_convertRewardTokensToDepositTokens");
 
         address token0 = IPair(address(depositToken)).token0();
         uint amountOutToken0 = amountIn;
@@ -280,7 +280,7 @@ contract NoFeeStrategy is BaseStrategy {
         uint balanceBefore = depositToken.balanceOf(address(this));
         stakingContract.exit();
         uint balanceAfter = depositToken.balanceOf(address(this));
-        require(balanceAfter.sub(balanceBefore) >= minReturnAmountAccepted, "DexStrategyV5::rescueDeployedFunds");
+        require(balanceAfter.sub(balanceBefore) >= minReturnAmountAccepted, "NoFee::rescueDeployedFunds");
         totalDeposits = balanceAfter;
         emit Reinvest(totalDeposits, totalSupply);
         if (DEPOSITS_ENABLED == true && disableDeposits == true) {
